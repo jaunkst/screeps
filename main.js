@@ -1,70 +1,84 @@
 (function () {
 'use strict';
 
-function objectEntries(object){
-    return Object.keys(object).map((key) => {
-        return object[key];
-    })
-}
+var log = function log() {
+    {
+        var _console;
 
-const creeps = function() {
-    return objectEntries(Game.creeps)
+        (_console = console).log.apply(_console, arguments);
+    }
 };
 
-function objectEntries$1(object){
-    return Object.keys(object).map((key) => {
-        return object[key];
-    })
-}
-
-const spawns = function() {
-    return objectEntries$1(Game.spawns);
+var benchmark = function benchmark(callback) {
+    var start = Date.now();
+    callback();
+    log('cpu:', Date.now() - start);
 };
 
-const moveSystem = {
-    tick: () => {
-        console.log('tick');
-        creeps().forEach((creep) => {
-            console.log(creep);
+var objectEntries = function objectEntries(object) {
+    return Object.keys(object).map(function (key) {
+        return object[key];
+    });
+};
+
+var storeManager = function storeManager(callback) {
+    var store = JSON.parse(RawMemory.get());
+    callback(store);
+    // garbage collect store
+    RawMemory.set(JSON.stringify(store));
+};
+
+var creeps = function creeps() {
+    return objectEntries(Game.creeps);
+};
+
+var spawns = function spawns() {
+    return objectEntries(Game.spawns);
+};
+
+var systems = function systems() {
+    return objectEntries(_systems);
+};
+
+var moveSystem = {
+    tick: function tick() {
+        creeps().forEach(function (creep) {
+            // should move creep
         });
     }
 };
 
-const responses = [
-    {constant: OK, message: 'The operation has been scheduled successfully.'},
-    {constant: ERR_NOT_OWNER, message: 'You are not the owner of this spawn.'},
-    {constant: ERR_NAME_EXISTS, message: 'There is a creep with the same name already.'},
-    {constant: ERR_BUSY, message: 'The spawn is already in process of spawning another creep.'},
-    {constant: ERR_NOT_ENOUGH_ENERGY, message: 'The spawn and its extensions contain not enough energy to create a creep with the given body.'},
-    {constant: ERR_INVALID_ARGS, message: 'Body is not properly described or name was not provided.'},
-    {constant: ERR_RCL_NOT_ENOUGH, message: 'Your Room Controller level is insufficient to use this spawn.'},
-];
+var responses = [{ constant: OK, message: 'The operation has been scheduled successfully.' }, { constant: ERR_NOT_OWNER, message: 'You are not the owner of this spawn.' }, { constant: ERR_NAME_EXISTS, message: 'There is a creep with the same name already.' }, { constant: ERR_BUSY, message: 'The spawn is already in process of spawning another creep.' }, { constant: ERR_NOT_ENOUGH_ENERGY, message: 'The spawn and its extensions contain not enough energy to create a creep with the given body.' }, { constant: ERR_INVALID_ARGS, message: 'Body is not properly described or name was not provided.' }, { constant: ERR_RCL_NOT_ENOUGH, message: 'Your Room Controller level is insufficient to use this spawn.' }];
 
-const spawnSystem = {
-    tick: () => {
-        spawns().map((spawn) => {
+var spawnSystem = {
+    tick: function tick() {
+        spawns().map(function (spawn) {
             return spawn.spawnCreep([WORK, CARRY, MOVE], 'Worker1');
-        }).forEach((response) => {
-            responses.forEach((entry) => {
-                if(response == entry.constant) {
-                    console.log(entry.message);
+        }).forEach(function (response) {
+            responses.forEach(function (entry) {
+                if (response == entry.constant) {
+                    log(entry.message);
                 }
             });
         });
     }
 };
 
-const systems = [
-    spawnSystem,
-    moveSystem
-];
+
+
+var _systems = Object.freeze({
+	moveSystem: moveSystem,
+	spawnSystem: spawnSystem
+});
 
 module.exports.loop = function () {
-    const start = Date.now();
-    systems.forEach((system) => {
-        system.tick();
+    benchmark(function () {
+        storeManager(function (store) {
+            systems().forEach(function (system) {
+                system.tick(store);
+            });
+        });
     });
-    console.log('cpu:', start - Date.now());
 };
 
 }());

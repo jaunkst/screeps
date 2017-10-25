@@ -1,14 +1,13 @@
 import {spawnSystem, moveSystem} from 'systems';
-
-const systems = [
-    spawnSystem,
-    moveSystem
-]
+import {storeManager, objectEntries, benchmark} from 'lib';
+import {systems} from 'selectors';
 
 module.exports.loop = function () {
-    const start = Date.now()
-    systems.forEach((system) => {
-        system.tick()
-    })
-    console.log('cpu:', start - Date.now())
+    benchmark(() => {
+        storeManager((store) => {
+            systems().forEach((system) => {
+                system.tick(store);
+            });
+        });
+    });
 }

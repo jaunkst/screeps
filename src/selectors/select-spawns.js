@@ -1,8 +1,4 @@
-function objectEntries(object){
-    return Object.keys(object).map((key) => {
-        return object[key];
-    })
-}
+import {objectEntries} from 'lib';
 
 export const spawns = function() {
     return objectEntries(Game.spawns);

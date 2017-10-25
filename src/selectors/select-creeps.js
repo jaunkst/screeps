@@ -1,9 +1,5 @@
-function objectEntries(object){
-    return Object.keys(object).map((key) => {
-        return object[key];
-    })
-}
+import {objectEntries} from 'lib';
 
 export const creeps = function() {
-    return objectEntries(Game.creeps)
+    return objectEntries(Game.creeps);
 }

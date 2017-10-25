@@ -1,10 +1,10 @@
 import {creeps} from 'selectors';
+import {log} from 'lib';
 
 export const moveSystem = {
     tick: () => {
-        console.log('tick')
         creeps().forEach((creep) => {
-            console.log(creep);
+            // should move creep
         })
     }
 };

@@ -1,4 +1,5 @@
 import {spawns} from 'selectors';
+import {log} from 'lib';
 
 const responses = [
     {constant: OK, message: 'The operation has been scheduled successfully.'},
@@ -17,7 +18,7 @@ export const spawnSystem = {
         }).forEach((response) => {
             responses.forEach((entry) => {
                 if(response == entry.constant) {
-                    console.log(entry.message);
+                    log(entry.message);
                 }
             })
         })
