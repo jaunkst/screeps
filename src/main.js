@@ -1,5 +1,5 @@
 import {spawnSystem, moveSystem} from 'systems';
-import {storeManager, objectEntries, benchmark} from 'lib';
+import {storeManager, benchmark} from 'lib';
 import {systems} from 'selectors';
 
 module.exports.loop = function () {

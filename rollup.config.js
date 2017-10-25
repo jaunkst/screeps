@@ -2,6 +2,8 @@ import babel from 'rollup-plugin-babel';
 import commonjs from 'rollup-plugin-commonjs';
 import resolve from 'rollup-plugin-node-resolve';
 import replace from 'rollup-plugin-replace';
+import cleanup from 'rollup-plugin-cleanup';
+import filesize from 'rollup-plugin-filesize';
 
 export default {
     input: './src/main.js',
@@ -30,13 +32,14 @@ export default {
                     "root": ["./src"]
                 }]
             ]
-        }
-    ),
-    resolve({
-        jsnext: true
-    }),
-    commonjs({
-        include: 'node_modules/**'
-    })
-]
+        }),
+        resolve({
+            jsnext: true
+        }),
+        commonjs({
+            include: 'node_modules/**'
+        }),
+        cleanup(),
+        filesize()
+    ]
 };
