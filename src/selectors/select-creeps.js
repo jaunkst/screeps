@@ -1,5 +1,5 @@
 import {objectEntries} from 'lib';
 
-export const creeps = function() {
+export const selectCreeps = function() {
     return objectEntries(Game.creeps);
 }

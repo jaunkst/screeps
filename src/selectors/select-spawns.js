@@ -1,5 +1,5 @@
 import {objectEntries} from 'lib';
 
-export const spawns = function() {
+export const selectSpawns = function() {
     return objectEntries(Game.spawns);
 }

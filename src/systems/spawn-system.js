@@ -1,4 +1,4 @@
-import {spawns} from 'selectors';
+import {selectSpawns} from 'selectors';
 import {log} from 'lib';
 
 const responses = [
@@ -15,8 +15,10 @@ const responses = [
 // TODO: spawnSystem should control how much resouces to spend.
 
 export const spawnSystem = {
+    name: 'spawnSystem',
     tick: () => {
-        spawns().map((spawn) => {
+        const spawns = selectSpawns();
+        spawns.map((spawn) => {
             return spawn.spawnCreep([WORK, CARRY, MOVE], 'Worker1');
         }).forEach((response) => {
             responses.forEach((entry) => {
