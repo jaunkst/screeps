@@ -19,7 +19,11 @@ export const spawnSystem = {
     tick: () => {
         const spawns = selectSpawns();
         spawns.map((spawn) => {
-            return spawn.spawnCreep([WORK, CARRY, MOVE], 'Worker1');
+            const creep = spawn.spawnCreep([WORK, CARRY, MOVE], 'Worker1');
+            Game.creeps.Worker1.memory.drainOrGain = 0;
+
+            return creep;
+
         }).forEach((response) => {
             responses.forEach((entry) => {
                 if(response == entry.constant) {

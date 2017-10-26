@@ -20,25 +20,6 @@ var objectEntries = function objectEntries(object) {
     });
 };
 
-var storeManager = function storeManager(callback) {
-    var store = JSON.parse(RawMemory.get());
-    Object.assign(store, {
-        actions: [],
-        worldStats: {}
-    });
-    store.dispatch = function (action) {
-        store.actions.push(action);
-    };
-    callback(store);
-    RawMemory.set(JSON.stringify(store));
-};
-
-var worldSystem = {
-    name: 'worldSystem',
-    tick: function tick(store) {
-    }
-};
-
 var selectCreeps = function selectCreeps() {
     return objectEntries(Game.creeps);
 };
@@ -51,13 +32,35 @@ var selectSystems = function selectSystems() {
     return objectEntries(_systems);
 };
 
+var storeManager = function storeManager(callback) {
+    var store = JSON.parse(RawMemory.get());
+    Object.assign(store, {
+        actions: [],
+        worldStats: {}
+    });
+    store.dispatch = function (action) {
+        store.actions.push(action);
+    };
+    callback(store);
+    console.log(JSON.stringify(store));
+    RawMemory.set(JSON.stringify(store));
+};
+
+var worldSystem = {
+    name: 'worldSystem',
+    tick: function tick(store) {
+    }
+};
+
 var responses = [{ constant: OK, message: 'The operation has been scheduled successfully.' }, { constant: ERR_NOT_OWNER, message: 'You are not the owner of this spawn.' }, { constant: ERR_NAME_EXISTS, message: 'There is a creep with the same name already.' }, { constant: ERR_BUSY, message: 'The spawn is already in process of spawning another creep.' }, { constant: ERR_NOT_ENOUGH_ENERGY, message: 'The spawn and its extensions contain not enough energy to create a creep with the given body.' }, { constant: ERR_INVALID_ARGS, message: 'Body is not properly described or name was not provided.' }, { constant: ERR_RCL_NOT_ENOUGH, message: 'Your Room Controller level is insufficient to use this spawn.' }];
 var spawnSystem = {
     name: 'spawnSystem',
     tick: function tick() {
         var spawns = selectSpawns();
         spawns.map(function (spawn) {
-            return spawn.spawnCreep([WORK, CARRY, MOVE], 'Worker1');
+            var creep = spawn.spawnCreep([WORK, CARRY, MOVE], 'Worker1');
+            Game.creeps.Worker1.memory.drainOrGain = 0;
+            return creep;
         }).forEach(function (response) {
             responses.forEach(function (entry) {
                 if (response == entry.constant) {
@@ -2583,11 +2586,10 @@ module.exports.findClosestIndex = findClosestIndex;
 module.exports.defaultCompare = defaultCompare;
 });
 
-var FIND_RESOURCES = 'find_resources';
-var MINE_RESOURCES = 'mine_resources';
-var RETURN_RESOURCES = 'return_resources';
-var DEPOSIT_RESOURCES = 'deposit_resources';
-var weights = [{ action: FIND_RESOURCES, weight: 0.00 }, { action: MINE_RESOURCES, weight: 0.25 }, { action: RETURN_RESOURCES, weight: 0.75 }, { action: DEPOSIT_RESOURCES, weight: 1.00 }];
+var COLLECT_RESOURCES = 'collect_resources';
+var UPGRADE_CONTROLLER = 'return_resources';
+var weights = [{ action: COLLECT_RESOURCES, weight: 0.00 }, { action: UPGRADE_CONTROLLER, weight: 1.00 }];
+var network = new Perceptron(3, 2, 1);
 function getWeightForAction(action) {
     return weights.find(function (entry) {
         return entry.action === action;
@@ -2596,35 +2598,68 @@ function getWeightForAction(action) {
 function getActionForWeight(weight) {
     return findClosest_1(weights, weight, 'weight').action;
 }
-var network = new Perceptron(2, 4, 4, 1);
+function getCreepState(creep) {
+    return [creep.hits / creep.hitsMax, creep.carry.energy / creep.carryCapacity, creep.memory.drainOrGain];
+}
 var trainer = new Trainer(network);
-trainer.train([{
-    input: [0, 0],
-    output: [getWeightForAction(FIND_RESOURCES)]
+function trainNetwork(data, iterations) {
+    for (var i = 0; i < iterations; i++) {
+        trainer.train(data);
+    }
+}
+trainNetwork([{
+    input: [1, 0, 0],
+    output: [getWeightForAction(COLLECT_RESOURCES)]
 }, {
-    input: [0, 1],
-    output: [getWeightForAction(MINE_RESOURCES)]
-}, {
-    input: [1, 0],
-    output: [getWeightForAction(RETURN_RESOURCES)]
-}, {
-    input: [1, 1],
-    output: [getWeightForAction(DEPOSIT_RESOURCES)]
-}]);
+    input: [1, 1, 1],
+    output: [getWeightForAction(UPGRADE_CONTROLLER)]
+}], 1);
 var roleSystem = {
     name: 'roleSystem',
     tick: function tick(store) {
         var creeps = selectCreeps();
         creeps.forEach(function (creep) {
-            store.dispatch({
-                type: getActionForWeight(network.activate([0, 0])),
-                payload: {
-                    creepId: creep.id
-                }
-            });
+            try {
+                store.dispatch({
+                    type: getActionForWeight(network.activate(getCreepState(creep))),
+                    payload: {
+                        creepId: creep.id
+                    }
+                });
+            } catch (err) {
+                log('ai:', 'failed to activate network');
+            }
         });
     },
     onAction: function onAction(action) {
+        var creep = Game.getObjectById(action.payload.creepId);
+        var goals = [];
+        console.log('state', JSON.stringify(getCreepState(creep)));
+        if (action.type === COLLECT_RESOURCES) {
+            goals = creep.room.find(FIND_SOURCES).map(function (source) {
+                return { pos: source.pos, range: 1 };
+            });
+        }
+        if (action.type === UPGRADE_CONTROLLER) {
+            goals = creep.room.find(FIND_STRUCTURES, {
+                filter: { my: true, structureType: STRUCTURE_CONTROLLER }
+            }).map(function (source) {
+                return { pos: source.pos, range: 1 };
+            });
+            console.log('ret', JSON.stringify(goals));
+        }
+        var ret = PathFinder.search(creep.pos, goals);
+        var pos = ret.path[0];
+        creep.move(creep.pos.getDirectionTo(pos));
+        if (action.type === COLLECT_RESOURCES) {
+            var target = creep.pos.findClosestByRange(FIND_SOURCES_ACTIVE);
+            if (target) {
+                creep.harvest(target);
+            }
+        }
+        if (action.type === UPGRADE_CONTROLLER) {
+            var status = creep.upgradeController(creep.room.controller);
+        }
         log('action:', JSON.stringify(action));
     }
 };
