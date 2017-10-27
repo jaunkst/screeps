@@ -8,11 +8,14 @@ export const storeManager = function(callback){
         worldStats: {}
     });
 
+    if(!store.spawnCounter){
+        store.spawnCounter = 0;
+    }
+
     store.dispatch = (action) => {
         store.actions.push(action);
     };
 
     callback(store);
-    console.log(JSON.stringify(store))
     RawMemory.set(JSON.stringify(store));
 }

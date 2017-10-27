@@ -1,5 +1,5 @@
 export const log = function(...args){
     if(DEBUG){
-        console.log(...args);
+        console.log('[info]', ...args);
     }
 }
